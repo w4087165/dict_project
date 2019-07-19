@@ -7,49 +7,108 @@
      *数据库    : 查询
     2.结构设计
       *类封装  将查询操作功能为类
+
     3.功能模块
         * 搭建网络通信模型
 
-    4.协议确定
+    4.数据表进行建立(dict:words)
+        * 用户 user -> id name passwd
+         create table user (id int primary key auto_increment ,name varchar(32) not null,passwd varchar(128) not null);
+        * 历史记录表 hist-> name word time
+        create table hist(id int primary key auto_increment ,name varchar(32) not null,word varchar(28) not null, time datetime default now());
+    import hashlib
+    生成加密对象
+    hash = hashlib.md5()
 
-      L  请求文件列表
-      Q  退出
-      G  下载文件
-      P  上传文件
+    对密码进行加密 (passwd)
+    hash.update(passwd.encode())
+
+    加密后的密码(返回加密后的字符串)
+    pwd = hash.hexdigest()
+
 """
 #导入模块------------------
 import gevent
 from gevent import monkey
 monkey.patch_socket()
 from socket import *
-import pymysql
-from sql_config import * #导入数据库配置
+import os
+from db_handel import Database #导入数据库操作对象
 #定义全局变量
 SERVER_ADDR = ('127.0.0.1',8080)
-SQL_CONFIG = MySQLConfig()
+#定义电子词典
 
-#定义电子词典查询类
-class DictServer():
-    def __init__(self,sockfd):
-        self.sockfd = sockfd
 
-    def handle(self,c):
-        while True:
-            print('asdfsadf')
+# 注册方法
+def sign_in(c,db):
+    data = c.recv(1024).decode()
+    data = data.split(' ')
+    name = data[0]
+    passwd = data[1]
+    print(name,passwd)
+    if db.sign_in(name,passwd):
+        print('ok')
+        c.send("OK".encode())
+    else:
+        c.send('ERROR'.encode())
+        print('失败')
+#登录
+def do_login(c,db):
+    data = c.recv(1024).decode()
+    data = data.split(' ')
+    name = data[0]
+    passwd = data[1]
+    print(name, passwd)
+    if db.db_do_login(name,passwd):
+        print('登录成功')
+        c.send("OK".encode())
+    else:
+        c.send('ERROR'.encode())
+        print('失败')
+#查询单词
+def do_query(c,db):
+    while True:
+        data = c.recv(1024).decode()
+        if data == "##":
+            return
+        data = data.split(' ')
+        name = data[0]
+        world = data[1]
+        # 没找到返回None 找到返回单词解释
+        mean = db.query(world)
+        # 添加信息到历史记录表
+        db.inser_hist(name,world)
+        if not mean:
+            print('没找到单词')
+            c.send('None'.encode())
+        else:
+            print('找到单词')
+            c.send(mean.encode())
+def handle(c):
+    # 链接数据库
+    db = Database(database='dict')
+    db.connect_database()
+    db.create_cursor()
+    while True:
+        try:
             data = c.recv(1024).decode()
-            if not data:
-                break
-            print(data)
-            c.send(b'OK')
+        except KeyboardInterrupt:
+            print('服务器意外退出')
+            break
+        if not data:
+            break
+        print(c.getpeername(),":",data)
+        if data == 'LOGIN':
+            #登录
+            do_login(c,db)
+        elif data == 'SIGN_IN':
+            sign_in(c,db)
+        elif data == 'EXIT':
+            print(c.getpeername,': 退出')
+            break
+        elif data == "QUERY":
+            do_query(c,db)
 
-    # 循环接受客户端请求
-    def do_connect(self):
-        print('Waiting connect ... ')
-        while True:
-            print('sdfasdfasdfasdf')
-            conn, addr = self.sockfd.accept()
-            print('conn from ', addr)
-            gevent.spawn(self.handle, conn)
 
 
 def main():
@@ -61,13 +120,14 @@ def main():
     sockfd.listen(6)
 
     #建立链接 创建携程对象 循环接受多客户请求
-    dict_server = DictServer(sockfd)
-    g_c = gevent.spawn(dict_server.do_connect())
-    gevent.joinall([g_c])
-
-
-
-
+    while True:
+        print('wait...')
+        try:
+            conn, addr = sockfd.accept()
+        except KeyboardInterrupt:
+            print('服务器退出')
+        print('conn from ', addr)
+        gevent.spawn(handle,conn)
 
 if __name__ == '__main__':
     main()

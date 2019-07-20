@@ -84,6 +84,19 @@ def do_query(c,db):
         else:
             print('找到单词')
             c.send(mean.encode())
+
+#查找历史记录
+def do_hist(c,db):
+    data = c.recv(1024).decode()
+    data = data.split(' ')
+    request = data[0]
+    name = data[1]
+    if request == 'ALLHIST':
+        hist_msg = db.get_all_hist(name)
+    elif request == "TENHIST":
+        hist_msg = db.get_ten_hist(name)
+    c.send(str(hist_msg).encode())
+
 def handle(c):
     # 链接数据库
     db = Database(database='dict')
@@ -108,7 +121,8 @@ def handle(c):
             break
         elif data == "QUERY":
             do_query(c,db)
-
+        elif data == "HIST":
+            do_hist(c,db)
 
 
 def main():
@@ -118,6 +132,8 @@ def main():
     sockfd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     sockfd.bind(SERVER_ADDR)
     sockfd.listen(6)
+
+
 
     #建立链接 创建携程对象 循环接受多客户请求
     while True:

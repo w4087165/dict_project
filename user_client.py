@@ -12,7 +12,7 @@
 from socket import socket
 from menu_view import *     # 导入菜单
 import getpass   #只能运行于终端getpass.getpass  密码输入隐藏
-
+import re
 
 #登录
 def login():
@@ -72,6 +72,23 @@ def do_query(name):
         sockfd.send(msg.encode())
         data = sockfd.recv(4096).decode()
         print('查询结果',data)
+#历史记录
+def do_hist(name):
+    sockfd.send('HIST'.encode())
+    msg = input('[1] 全部历史记录\n'
+                '[2] 最近前10条记录\n')
+    if msg == "1":
+        msg = 'ALLHIST %s'%name
+        sockfd.send(msg.encode())
+    elif msg == "2":
+        msg = 'TENHIST %s'%name
+        sockfd.send(msg.encode())
+    data = sockfd.recv(4096).decode()
+    data = re.findall('(.+)')
+    for i in data:
+        print(i)
+
+
 
 
 #定义全局变量
@@ -86,8 +103,8 @@ def select_dict(name):
         if s == '1':
             do_query(name)
         elif s == '2':
-            # 历史激励
-            pass
+            # 历史记录
+            do_hist(name)
         elif s == '3':
             # 退出
             break

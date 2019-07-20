@@ -98,3 +98,23 @@ class Database:
         except Exception:
             self.db.rollback()
             print('存入历史失败')
+    def get_all_hist(self,name):
+        sql = 'select * from hist where name = %s'
+        self.cur.execute(sql,[name])
+        result = self.cur.fetchall()
+        if result:
+            #如果查到返回查找结果
+            return result
+
+        return '暂无历史信息'
+
+    def get_ten_hist(self,name):
+        sql = "select * from hist wehre name = %s order by time desc limit 10"
+        self.cur.execute(sql, [name])
+        result = self.cur.fetchall()
+        if result:
+            # 如果查到返回查找结果
+            return result
+
+        return '暂无历史信息'
+

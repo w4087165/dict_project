@@ -84,7 +84,7 @@ def do_hist(name):
         msg = 'TENHIST %s'%name
         sockfd.send(msg.encode())
     data = sockfd.recv(4096).decode()
-    data = re.findall('(.+)')
+    data = re.findall(r'\(.+?\(.+?\)\)',data)
     for i in data:
         print(i)
 

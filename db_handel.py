@@ -109,7 +109,7 @@ class Database:
         return '暂无历史信息'
 
     def get_ten_hist(self,name):
-        sql = "select * from hist wehre name = %s order by time desc limit 10"
+        sql = "select * from hist where name = %s order by time desc limit 10"
         self.cur.execute(sql, [name])
         result = self.cur.fetchall()
         if result:
